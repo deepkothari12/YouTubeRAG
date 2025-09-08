@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube RAG - Ask Questions About Videos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0F172A 0%, #0F172A 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366F1 0%, #6366F1 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        } 
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .step h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            margin-top: 15px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e0e6ed;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .answer-box {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .answer-box h3 {
+            color: #0c5460;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .answer-text {
+            color: #0c5460;
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+
+        .video-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .video-info h4 {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .video-id {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #495057;
+        }
+
+        .tip {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #0056b3;
+        }
+
+        .tip strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> YouTube RAG</h1>
+            <p>Ask questions about any YouTube video using AI</p>
+        </div>
+
+        <div class="content">
+            <!-- Step 1: Index Video -->
+            <div class="step">
+                <h2>
+                    <span class="step-number">1</span>
+                    Index YouTube Video
+                </h2>
+                <div class="input-group">
+                    <label for="videoId">YouTube Video ID:</label>
+                    <input type="text" id="videoId" placeholder="e.g., dQw4w9WgXcQ (from https://youtube.com/watch?v=dQw4w9WgXcQ)">
+                    <div class="tip">
+                        <strong>How to get Video ID:</strong>
+                        Copy the part after "v=" from YouTube URL. For example, if URL is https://youtube.com/watch?v=dQw4w9WgXcQ, then ID is "dQw4w9WgXcQ"
+                    </div>
+                </div>
+                <button class="btn" onclick="indexVideo()">📥 Index Video</button>
+                
+                <div class="loading" id="indexLoading">
+                    <div class="spinner"></div>
+                    Processing video... This may take a minute.
+                </div>
+                
+                <div class="result" id="indexResult"></div>
+                <div class="video-info" id="videoInfo">
+                    <h4>✅ Video Indexed Successfully!</h4>
+                    <p>Video ID: <span class="video-id" id="indexedVideoId"></span></p>
+                    <p>You can now ask questions about this video below.</p>
+                </div>
+            </div>
+
+            <!-- Step 2: Ask Question -->
+            <div class="step">
+                <h2>
+                    <span class="step-number">2</span>
+                    Ask a Question
+                </h2>
+                <div class="input-group">
+                    <label for="questionVideoId">Video ID (same as above):</label>
+                    <input type="text" id="questionVideoId" placeholder="Enter the same video ID">
+                </div>
+                <div class="input-group">
+                    <label for="question">Your Question:</label>
+                    <textarea id="question" placeholder="What would you like to know about this video?"></textarea>
+                </div>
+                <button class="btn" onclick="askQuestion()">❓ Ask Question</button>
+                
+                <div class="loading" id="questionLoading">
+                    <div class="spinner"></div>
+                    Finding answer in video...
+                </div>
+                
+                <div class="result" id="questionResult"></div>
+                <div class="answer-box" id="answerBox">
+                    <h3>🤖 Answer:</h3>
+                    <div class="answer-text" id="answerText"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL - change this to your actual API URL
+        const API_BASE_URL = 'http://10.10.2.130:5005';
+
+        // Function to show loading state
+        function showLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'flex';
+        }
+
+        // Function to hide loading state
+        function hideLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'none';
+        }
+
+        // Function to show result message
+        function showResult(resultId, message, isSuccess = true) {
+            const resultEl = document.getElementById(resultId);
+            resultEl.textContent = message;
+            resultEl.className = `result ${isSuccess ? 'success' : 'error'}`;
+            resultEl.style.display = 'block';
+        }
+
+        // Function to hide result message
+        function hideResult(resultId) {
+            document.getElementById(resultId).style.display = 'none';
+        }
+
+        // Function to index a YouTube video
+        async function indexVideo() {
+            const videoId = document.getElementById('videoId').value.trim();
+            
+            if (!videoId) {
+                showResult('indexResult', 'Please enter a YouTube video ID', false);
+                return;
+            }
+
+            // Hide previous results
+            hideResult('indexResult');
+            document.getElementById('videoInfo').style.display = 'none';
+            
+            // Show loading
+            showLoading('indexLoading');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/index/${videoId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.text();
+                    showResult('indexResult', 'Video indexed successfully!', true);
+                    
+                    // Show video info and auto-fill the question video ID
+                    document.getElementById('indexedVideoId').textContent = videoId;
+                    document.getElementById('videoInfo').style.display = 'block';
+                    document.getElementById('questionVideoId').value = videoId;
+                } else {
+                    const error = await response.text();
+                    showResult('indexResult', `Error: ${error}`, false);
+                }
+            } catch (error) {
+                showResult('indexResult', `Network error: ${error.message}`, false);
+            } finally {
+                hideLoading('indexLoading');
+            }
+        }
+
+        // Function to ask a question about the video
+        async function askQuestion() {
+            const videoId = document.getElementById('questionVideoId').value.trim();
+            const question = document.getElementById('question').value.trim();
+            
+            if (!videoId) {
+                showResult('questionResult', 'Please enter the video ID', false);
+                return;
+            }
+            
+            if (!question) {
+                showResult('questionResult', 'Please enter a question', false);
+                return;
+            }
+
+            // Hide previous results
+            hideResult('questionResult');
+            document.getElementById('answerBox').style.display = 'none';
+            
+            // Show loading
+            showLoading('questionLoading');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/ask/${videoId}?query=${question}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                // if (response.ok) {
+                //     const answer = await response.json();
+                    
+                //     // Show the answer
+                //     document.getElementById('answerText').textContent = answer['answer'];
+                //     document.getElementById('answerBox').style.display = 'block';
+                //     showResult('questionResult', 'Answer retrieved successfully!', true);
+                // } else {
+                //     const error = await response.text();
+                //     showResult('questionResult', `Error: ${error}`, false);
+                // }
+                if (response.ok) {
+                const answer = await response.json();
+                const answerElement = document.getElementById('answerText');
+                const answerBox = document.getElementById('answerBox');
+                
+                answerBox.style.display = 'block';
+                answerElement.textContent = '';
+                
+                // Split into words and stream word by word
+                const words = answer['answer'].split(' ');
+                let currentWordIndex = 0;
+                
+                const streamWords = () => {
+                    if (currentWordIndex < words.length) {
+                        if (currentWordIndex === 0) {
+                            answerElement.textContent = words[currentWordIndex];
+                        } else {
+                            answerElement.textContent += ' ' + words[currentWordIndex];
+                        }
+                        currentWordIndex++;
+                        setTimeout(streamWords, 200); // 200ms delay between words
+                    } else {
+                        showResult('questionResult', 'Answer retrieved successfully!', true);
+                    }
+                };
+                
+                streamWords();
+                
+            } else {
+                const error = await response.text();
+                showResult('questionResult', `Error: ${error}`, false);
+            }
+            } catch (error) {
+                showResult('questionResult', `Network error: ${error.message}`, false);
+            } finally {
+                hideLoading('questionLoading');
+            }
+        }
+
+        // Auto-sync video IDs when user types in the first input
+        document.getElementById('videoId').addEventListener('input', function() {
+            const videoId = this.value.trim();
+            document.getElementById('questionVideoId').value = videoId;
+        });
+    </script>
+</body>
+</html>

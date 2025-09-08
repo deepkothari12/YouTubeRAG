@@ -6,6 +6,7 @@ import logging
 import os 
 from openai import OpenAI
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -16,6 +17,14 @@ RETRIEVER_K = int(os.getenv("RETRIEVER_K" , 4))
 
 app = FastAPI(title="YouTube RAG API", version="1.0")
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 ### setup login 
 logging.basicConfig(
     level=logging.INFO,

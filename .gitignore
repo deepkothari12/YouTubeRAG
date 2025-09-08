@@ -1,4 +1,6 @@
 .venv   
 *.log
-.data
+data/
 .env
+
+#git rm -r --cached data
