@@ -14,7 +14,7 @@ def get_embedding_function(model_name: str = None):
         return _embedding_function
     
     try:
-        model = model_name or os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        model = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
         logging.info(f"Loading embedding model: {model} on {device}")
         _embedding_function = HuggingFaceEmbeddings(
             model_name=model,
